@@ -28,6 +28,7 @@
 
 #include "Arduino.h"
 #include "libbonuspin/libbonuspin.h"
+#include "LiquidCrystal.h"
 
 namespace hitagi {
     constexpr auto RED_PWM = 5;
@@ -37,11 +38,11 @@ namespace hitagi {
     constexpr auto SPIDecoderA1 = A2;
     constexpr auto SPIDecoderA2 = A1;
     constexpr auto SPIDecoderEnable = A0;
-    constexpr auto MCP23S17Enable = 0b111;
-    constexpr auto SRAMEnable = 0b110;
-    constexpr auto SPI0Enable = 0b000;
-    constexpr auto SPI1Enable = 0b001;
-    constexpr auto SPI2Enable = 0b010;
+    constexpr auto GPIODeviceAddress = 0b111;
+    constexpr auto SRAMDeviceAddress = 0b110;
+    constexpr auto SPI0DeviceAddress = 0b000;
+    constexpr auto SPI1DeviceAddress = 0b001;
+    constexpr auto SPI2DeviceAddress = 0b010;
     // These are unused pins which are broken out into STEMMA connectors
     constexpr auto Digital0 = 4;
     constexpr auto Analog6 = A6;
@@ -77,25 +78,79 @@ namespace hitagi {
             GPIOExpander(Self&&) = delete;
             ~GPIOExpander() override = default;
             void enableCS() noexcept override {
-                setSPIAddress(MCP23S17Enable);
-                digitalWrite(SPIDecoderEnable, LOW);
+                setSPIAddress(GPIODeviceAddress);
+                selectSPIDevice();
             }
             void disableCS() noexcept override {
-                digitalWrite(SPIDecoderEnable, HIGH);
+                deselectSPIDevice();
             }
     };
 
+    using SPIActivator = bonuspin::HoldPinLow<SPIDecoderEnable>;
+
     class SRAM final {
+        private:
+            enum class Opcodes : uint8_t {
+                RDSR = 0x05,
+                RDMR = RDSR,
+                WRSR = 0x01,
+                WRMR = WRSR,
+                READ = 0x03,
+                WRITE = 0x02,
+                EDIO = 0x3B,
+                EQIO = 0x38,
+                RSTIO = 0xFF,
+            };
         public:
-            using Interface = bonuspin::sram::microchip::series_23lcxx::Device_23LC1024;
+            using Address = uint32_t;
             static SRAM& instance() noexcept;
         private:
+            void sendOpcode(Opcodes op) const noexcept {
+                SPI.transfer(uint8_t(op));
+            }
+            void transferAddress(Address addr) const noexcept {
+                SPI.transfer(static_cast<uint8_t>(address >> 16));
+                SPI.transfer(static_cast<uint8_t>(address >> 8));
+                SPI.transfer(static_cast<uint8_t>(address));
+            }
+        public:
+            uint8_t read(Address address) const noexcept {
+                setSPIAddress(SRAMDeviceAddress);
+                SPIActivator activate;
+                sendOpcode(Opcodes::READ);
+                transferAddress(address);
+                return SPI.transfer(0x00);
+            }
+            void write(Address address, uint8_t value) const noexcept {
+                setSPIAddress(SRAMDeviceAddress);
+                SPIActivator activate;
+                sendOpcode(Opcodes::WRITE);
+                transferAddress(address);
+                SPI.transfer(value);
+            }
+        private:
             SRAM() = default;
+    };
 
-    }
-    // All of the used pins
-    // there are unused pins attached to the MCP23S17 and those will need
-    // to be decoded as well
+    class Screen final : public LiquidCrystal {
+        public:
+            static constexpr auto GPIO_RS = 6;
+            static constexpr auto GPIO_RW = 5;
+            static constexpr auto GPIO_EN = 4;
+            static constexpr auto GPIO_A4 = 3;
+            static constexpr auto GPIO_A5 = 2;
+            static constexpr auto GPIO_A6 = 1;
+            static constexpr auto GPIO_A7 = 0;
+            static Screen& instance() noexcept;
+        protected:
+            using LiquidCrystal::LiquidCrystal;
+            void digitalWrite(int pin, int value) noexcept override {
+                ::digitalWrite(pin, value, GPIOExpander::instance());
+            }
+            void pinMode(int pin, int mode) noexcept override {
+                ::pinMode(pin, value, GPIOExpander::instance());
+            }
+    };
 } // end namespace hitagi
 
 #endif // end HITAGI_H__
