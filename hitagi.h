@@ -29,7 +29,6 @@
 #include "Arduino.h"
 #include "libbonuspin/libbonuspin.h"
 #include "LiquidCrystal.h"
-#include <Adafruit_seesaw.h>
 #include <SPI.h>
 
 namespace hitagi {
