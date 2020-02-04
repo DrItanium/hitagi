@@ -27,9 +27,9 @@
 #define HITAGI_H__
 
 #include "Arduino.h"
+#include "libbonuspin/libbonuspin.h"
 
 namespace hitagi {
-    // All of the used pins
     constexpr auto RED_PWM = 5;
     constexpr auto GREEN_PWM = 6;
     constexpr auto BLUE_PWM = 9;
@@ -50,6 +50,50 @@ namespace hitagi {
     constexpr auto Analog8 = A8;
     constexpr auto PWM = 10;
     constexpr auto D10 = 10;
+    inline void setSPIAddress(byte value) noexcept {
+        digitalWrite(SPIDecoderA0, value & 0b001 ? HIGH : LOW);
+        digitalWrite(SPIDecoderA1, value & 0b010 ? HIGH : LOW);
+        digitalWrite(SPIDecoderA2, value & 0b100 ? HIGH : LOW);
+    }
+    inline void selectSPIDevice() noexcept {
+        digitalWrite(SPIDecoderEnable, LOW);
+    }
+    inline void deselectSPIDevice() noexcept {
+        digitalWrite(SPIDecoderEnable, HIGH);
+    }
+    class GPIOExpander : public GenericMCP23S17<0b000> {
+        public:
+            // note that the interrupt lines are _NOT_ connected in REV2
+            // hardware and probably will never be until I understand how to
+            // wire up the interrupts correctly!
+            using Self = GPIOExpander;
+            static GPIOExpander& instance() noexcept;
+        private:
+            GPIOExpander() = default;
+        public:
+            Self& operator=(const Self&) = delete; 
+            Self& operator=(Self&&) = delete; 
+            GPIOExpander(const Self&) = delete;
+            GPIOExpander(Self&&) = delete;
+            ~GPIOExpander() override = default;
+            void enableCS() noexcept override {
+                setSPIAddress(MCP23S17Enable);
+                digitalWrite(SPIDecoderEnable, LOW);
+            }
+            void disableCS() noexcept override {
+                digitalWrite(SPIDecoderEnable, HIGH);
+            }
+    };
+
+    class SRAM final {
+        public:
+            using Interface = bonuspin::sram::microchip::series_23lcxx::Device_23LC1024;
+            static SRAM& instance() noexcept;
+        private:
+            SRAM() = default;
+
+    }
+    // All of the used pins
     // there are unused pins attached to the MCP23S17 and those will need
     // to be decoded as well
 } // end namespace hitagi
