@@ -29,6 +29,7 @@
 #include "Arduino.h"
 #include "libbonuspin/libbonuspin.h"
 #include "LiquidCrystal.h"
+#include <SPI.h>
 
 namespace hitagi {
     constexpr auto RED_PWM = 5;
@@ -62,13 +63,16 @@ namespace hitagi {
     inline void deselectSPIDevice() noexcept {
         digitalWrite(SPIDecoderEnable, HIGH);
     }
-    class GPIOExpander : public GenericMCP23S17<0b000> {
+    class GPIOExpander : public bonuspin::GenericMCP23S17<0b000> {
         public:
             // note that the interrupt lines are _NOT_ connected in REV2
             // hardware and probably will never be until I understand how to
             // wire up the interrupts correctly!
             using Self = GPIOExpander;
-            static GPIOExpander& instance() noexcept;
+            static GPIOExpander& instance() noexcept {
+                static GPIOExpander _self;
+                return _self;
+            }
         private:
             GPIOExpander() = default;
         public:
@@ -103,12 +107,15 @@ namespace hitagi {
             };
         public:
             using Address = uint32_t;
-            static SRAM& instance() noexcept;
+            static SRAM& instance() noexcept {
+                static SRAM _self;
+                return _self;
+            }
         private:
             void sendOpcode(Opcodes op) const noexcept {
                 SPI.transfer(uint8_t(op));
             }
-            void transferAddress(Address addr) const noexcept {
+            void transferAddress(Address address) const noexcept {
                 SPI.transfer(static_cast<uint8_t>(address >> 16));
                 SPI.transfer(static_cast<uint8_t>(address >> 8));
                 SPI.transfer(static_cast<uint8_t>(address));
@@ -141,16 +148,24 @@ namespace hitagi {
             static constexpr auto GPIO_A5 = 2;
             static constexpr auto GPIO_A6 = 1;
             static constexpr auto GPIO_A7 = 0;
-            static Screen& instance() noexcept;
+            static Screen& instance() noexcept {
+                static Screen _self(GPIO_RS, GPIO_RW, GPIO_EN, GPIO_A4, GPIO_A5, GPIO_A6, GPIO_A7);
+                return _self;
+            }
         protected:
+            ~Screen() override = default;
             using LiquidCrystal::LiquidCrystal;
             void digitalWrite(int pin, int value) noexcept override {
                 ::digitalWrite(pin, value, GPIOExpander::instance());
             }
             void pinMode(int pin, int mode) noexcept override {
-                ::pinMode(pin, value, GPIOExpander::instance());
+                ::pinMode(pin, mode, GPIOExpander::instance());
             }
+            // @todo add methods for setting pwm colors
     };
+    GPIOExpander& gpio = GPIOExpander::instance();
+    SRAM& sram = SRAM::instance();
+    Screen& lcd = Screen::instance();
 } // end namespace hitagi
 
 #endif // end HITAGI_H__

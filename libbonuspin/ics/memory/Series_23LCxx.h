@@ -30,7 +30,7 @@
 #include <SPI.h>
 #endif
 
-#include "core/concepts.h"
+#include "../../core/concepts.h"
 namespace bonuspin {
 namespace sram {
 namespace microchip {
