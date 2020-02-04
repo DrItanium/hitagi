@@ -29,6 +29,7 @@
 #include "Arduino.h"
 #include "libbonuspin/libbonuspin.h"
 #include "LiquidCrystal.h"
+#include <Adafruit_seesaw.h>
 #include <SPI.h>
 
 namespace hitagi {
@@ -152,6 +153,11 @@ namespace hitagi {
                 static Screen _self(GPIO_RS, GPIO_RW, GPIO_EN, GPIO_A4, GPIO_A5, GPIO_A6, GPIO_A7);
                 return _self;
             }
+            void setBacklightRedColor(int value) const noexcept;
+            void setBacklightGreenColor(int value) const noexcept;
+            void setBacklightBlueColor(int value) const noexcept;
+            void setBacklightColor(int r, int g, int b) const noexcept;
+            void setBacklightColor(uint32_t packedColor) const noexcept;
         protected:
             ~Screen() override = default;
             using LiquidCrystal::LiquidCrystal;
@@ -163,9 +169,10 @@ namespace hitagi {
             }
             // @todo add methods for setting pwm colors
     };
-    GPIOExpander& gpio = GPIOExpander::instance();
-    SRAM& sram = SRAM::instance();
-    Screen& lcd = Screen::instance();
+    void setup() noexcept;
+    extern GPIOExpander& gpio;
+    extern SRAM& sram;
+    extern Screen& lcd;
 } // end namespace hitagi
 
 #endif // end HITAGI_H__
