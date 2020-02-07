@@ -54,7 +54,7 @@ namespace hitagi {
     void setupOutputPins(Args&& ... pins) noexcept {
         (setupOutputPins(pins), ...);
     }
-    void init() noexcept {
+    void setup() noexcept {
         SPI.begin();
         lcd.begin(16, 2);
         setupOutputPins(SPIDecoderA0, SPIDecoderA1, SPIDecoderA2, SPIDecoderEnable);
@@ -65,12 +65,3 @@ namespace hitagi {
 
 } // end namespace hitagi
 
-void setup() {
-    // standard arduino setup function
-    hitagi::init();
-    hitagi::setup();
-}
-
-void loop() {
-    hitagi::loop();
-}

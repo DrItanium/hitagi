@@ -1,11 +1,11 @@
 #include "hitagi.h"
 
-void
-hitagi::setup() {
+void setup() {
+	hitagi::setup();
+	Serial.begin(9600);
 
 }
 
-void
-hitagi::loop() {
-
+void loop() {
+	Serial.println("Donuts");
 }

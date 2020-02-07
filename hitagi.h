@@ -168,15 +168,11 @@ namespace hitagi {
             }
             // @todo add methods for setting pwm colors
     };
-    void init() noexcept;
     void setup() noexcept;
-    void loop() noexcept;
     extern GPIOExpander& gpio;
     extern SRAM& sram;
     extern Screen& lcd;
 } // end namespace hitagi
 
-void setup();
-void loop();
 
 #endif // end HITAGI_H__
