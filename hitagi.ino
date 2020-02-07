@@ -1,9 +1,11 @@
 #include "hitagi.h"
 
-void setup() {
-    // setup the hitagi board
-    hitagi::setup();
+void
+hitagi::setup() {
+
 }
-void loop() {
+
+void
+hitagi::loop() {
 
 }
