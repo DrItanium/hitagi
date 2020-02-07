@@ -27,7 +27,7 @@
 #define HITAGI_H__
 
 #include "Arduino.h"
-#include "libbonuspin/libbonuspin.h"
+#include "libbonuspin.h"
 #include "LiquidCrystal.h"
 #include <SPI.h>
 
