@@ -46,22 +46,5 @@ namespace hitagi {
                           (0x0000FF00 & packedColor) >> 8,
                           (0x000000FF & packedColor));
     }
-    void setupOutputPin(int pin) noexcept {
-        pinMode(pin, OUTPUT);
-        digitalWrite(pin, HIGH);
-    }
-    template<typename ... Args>
-    void setupOutputPins(Args&& ... pins) noexcept {
-        (setupOutputPins(pins), ...);
-    }
-    void setup() noexcept {
-        SPI.begin();
-        lcd.begin(16, 2);
-        setupOutputPins(SPIDecoderA0, SPIDecoderA1, SPIDecoderA2, SPIDecoderEnable);
-    }
-    GPIOExpander& gpio = GPIOExpander::instance();
-    SRAM& sram = SRAM::instance();
-    Screen& lcd = Screen::instance();
-
 } // end namespace hitagi
 

@@ -49,7 +49,7 @@ namespace hitagi {
     constexpr auto Analog6 = A6;
     constexpr auto Digital7 = 7;
     constexpr auto Digital2 = 8;
-    constexpr auto Analog8 = A8;
+    //constexpr auto Analog8 = A8;
     constexpr auto PWM = 10;
     constexpr auto D10 = 10;
     inline void setSPIAddress(byte value) noexcept {
@@ -168,10 +168,14 @@ namespace hitagi {
             }
             // @todo add methods for setting pwm colors
     };
-    void setup() noexcept;
-    extern GPIOExpander& gpio;
-    extern SRAM& sram;
-    extern Screen& lcd;
+    inline void setupOutputPin(int pin) noexcept {
+        pinMode(pin, OUTPUT);
+        digitalWrite(pin, HIGH);
+    }
+    template<typename ... Args>
+    void setupOutputPins(Args&& ... pins) noexcept {
+        (setupOutputPins(pins), ...);
+    }
 } // end namespace hitagi
 
 
