@@ -24,30 +24,49 @@
  */
 
 #include "hitagi.h"
+#include <SPI.h>
 
 namespace hitagi {
     SRAM& sram = SRAM::instance();
-    GPIOExpander& gpio = GPIOExpander::instance();
-    Screen& lcd = Screen::instance();
-    void Screen::setBacklightRedColor(int value) const noexcept {
-        analogWrite(RED_PWM, value);
-    }
-    void Screen::setBacklightGreenColor(int value) const noexcept {
-        analogWrite(GREEN_PWM, value);
-    }
-    void Screen::setBacklightBlueColor(int value) const noexcept {
-        analogWrite(BLUE_PWM, value);
-    }
-    void Screen::setBacklightColor(int r, int g, int b) const noexcept {
-        setBacklightRedColor(r);
-        setBacklightGreenColor(g);
-        setBacklightBlueColor(b);
-    }
-    void Screen::setBacklightColor(uint32_t packedColor) const noexcept {
-        // format is 0rgb with r being bits 23-16
-        setBacklightColor((0x00FF0000 & packedColor) >> 16,
-                          (0x0000FF00 & packedColor) >> 8,
-                          (0x000000FF & packedColor));
+    Adafruit_ILI9341 lcd(LCD_CS, LCD_DC, LCD_RESET);
+    Adafruit_seesaw soil0;
+    SetupResult setup() {
+        SetupResult ret;
+        pinMode(SDCS, OUTPUT);
+        digitalWrite(SDCS, HIGH);
+        pinMode(SRAMEnable, OUTPUT);
+        digitalWrite(SRAMEnable, HIGH);
+        pinMode(LCD_CS, OUTPUT);
+        digitalWrite(LCD_CS, HIGH);
+
+        SPI.begin();
+        if (!SD.begin(SDCS)) {
+            ret.markSDInitFailed();
+        }
+        // setup the lcd as well
+        lcd.begin();
+        // then try and setup the soil sensor as well
+        if (!soil0.begin(0x36)) {
+            ret.markSoil0Failed();
+        }
+
+        // try doing a round trip test with the SRAM
+        auto value = 0x51;
+        auto address = 0x4FE;
+        sram.write(address, value);
+        if (auto result = sram.read(address); result != value) {
+            ret.markSRAMFailed();
+        }
+        // now pulse the led
+        for (int i = 0; i < 0x100; ++i) {
+            analogWrite(LED0, i);
+            delay(10);
+        }
+        for (int i = 0; i < 0x100; ++i) {
+            analogWrite(LED0, 0xFF - i);
+        }
+        
+        return ret;
     }
 } // end namespace hitagi
 

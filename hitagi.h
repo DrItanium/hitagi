@@ -28,51 +28,25 @@
 
 #include "Arduino.h"
 #include "libbonuspin.h"
-#include "LiquidCrystal.h"
 #include "Adafruit_ILI9341.h"
+#include "Adafruit_seesaw.h"
 #include <SPI.h>
+#include <SD.h>
 
 namespace hitagi {
-    constexpr auto RED_PWM = 5;
-    constexpr auto GREEN_PWM = 6;
-    constexpr auto BLUE_PWM = 9;
-    constexpr auto SRAMEnable = A0;
-    constexpr auto MCP23S17Enable = A1;
-    // These are unused pins which are broken out into STEMMA connectors
-    constexpr auto Digital0 = 4;
-    constexpr auto Analog6 = A6;
-    constexpr auto Digital7 = 7;
-    constexpr auto Digital2 = 8;
-    //constexpr auto Analog8 = A8;
-    constexpr auto PWM = 10;
-    constexpr auto D10 = 10;
-    class GPIOExpander : public bonuspin::GenericMCP23S17<0b000> {
-        public:
-            // note that the interrupt lines are _NOT_ connected in REV2
-            // hardware and probably will never be until I understand how to
-            // wire up the interrupts correctly!
-            using Self = GPIOExpander;
-            static GPIOExpander& instance() noexcept {
-                static GPIOExpander _self;
-                return _self;
-            }
-        private:
-            GPIOExpander() = default;
-        public:
-            Self& operator=(const Self&) = delete; 
-            Self& operator=(Self&&) = delete; 
-            GPIOExpander(const Self&) = delete;
-            GPIOExpander(Self&&) = delete;
-            ~GPIOExpander() override = default;
-            void enableCS() noexcept override {
-                digitalWrite(MCP23S17Enable, LOW);
-            }
-            void disableCS() noexcept override {
-                digitalWrite(MCP23S17Enable, HIGH);
-            }
-    };
-
-    using SPIActivator = bonuspin::HoldPinLow<SRAMEnable>;
+    constexpr auto LED0 = 10; 
+    constexpr auto D4 = 4;
+    constexpr auto PWM0 = 6;
+    constexpr auto PWM1 = 5;
+    constexpr auto LCD_DC = 7;
+    constexpr auto LCD_RESET = 8;
+    constexpr auto BRIGHTNESS = 9;
+    constexpr auto LCD_CS = A0;
+    constexpr auto SDCS = A1;
+    constexpr auto SRAMEnable = A2;
+    constexpr auto SPI0Enable = A3;
+    using SRAMActivator = bonuspin::HoldPinLow<SRAMEnable>;
+    using SPI0Activator = bonuspin::HoldPinLow<SPI0Enable>;
 
     class SRAM final {
         private:
@@ -104,13 +78,13 @@ namespace hitagi {
             }
         public:
             uint8_t read(Address address) const noexcept {
-                SPIActivator activate;
+                SRAMActivator activate;
                 sendOpcode(Opcodes::READ);
                 transferAddress(address);
                 return SPI.transfer(0x00);
             }
             void write(Address address, uint8_t value) const noexcept {
-                SPIActivator activate;
+                SRAMActivator activate;
                 sendOpcode(Opcodes::WRITE);
                 transferAddress(address);
                 SPI.transfer(value);
@@ -119,46 +93,26 @@ namespace hitagi {
             SRAM() = default;
     };
 
-    class Screen final : public LiquidCrystal {
+    class SetupResult final {
         public:
-            static constexpr auto GPIO_RS = 9;
-            static constexpr auto GPIO_RW = 10;
-            static constexpr auto GPIO_EN = 11;
-            static constexpr auto GPIO_A4 = 12;
-            static constexpr auto GPIO_A5 = 13;
-            static constexpr auto GPIO_A6 = 14;
-            static constexpr auto GPIO_A7 = 15;
-            static Screen& instance() noexcept {
-                static Screen _self(GPIO_RS, GPIO_RW, GPIO_EN, GPIO_A4, GPIO_A5, GPIO_A6, GPIO_A7);
-                return _self;
-            }
-            void setBacklightRedColor(int value) const noexcept;
-            void setBacklightGreenColor(int value) const noexcept;
-            void setBacklightBlueColor(int value) const noexcept;
-            void setBacklightColor(int r, int g, int b) const noexcept;
-            void setBacklightColor(uint32_t packedColor) const noexcept;
-        protected:
-            ~Screen() override = default;
-            using LiquidCrystal::LiquidCrystal;
-            void digitalWrite(int pin, int value) noexcept override {
-                GPIOExpander::instance().digitalWrite(pin, value);
-            }
-            void pinMode(int pin, int mode) noexcept override {
-                GPIOExpander::instance().pinMode(pin, mode);
-            }
-            // @todo add methods for setting pwm colors
+            constexpr SetupResult() = default;
+            void markSDInitFailed() noexcept { _sdFailed = true; }
+            constexpr auto sdInitFailed() const noexcept { return _sdFailed; }
+            void markSoil0Failed() noexcept { _soil0Failed = true; }
+            constexpr auto soil0Failed() const noexcept { return _soil0Failed; }
+            void markSRAMFailed() noexcept { _sramFailed = true; }
+            constexpr auto sramInitFailed() const noexcept { return _sramFailed; }
+        private:
+            bool _sdFailed = false;
+            bool _soil0Failed = false;
+            bool _sramFailed = false;
     };
-    inline void setupOutputPin(int pin) noexcept {
-        pinMode(pin, OUTPUT);
-        digitalWrite(pin, HIGH);
-    }
-    template<typename ... Args>
-    void setupOutputPins(Args&& ... pins) noexcept {
-        (setupOutputPins(pins), ...);
-    }
+
+    SetupResult setup() noexcept;
+
     extern SRAM& sram;
-    extern GPIOExpander& gpio;
-    extern Screen& lcd;
+    extern Adafruit_ILI9341 lcd;
+    extern Adafruit_seesaw soil0;
 } // end namespace hitagi
 
 
