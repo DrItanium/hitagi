@@ -29,21 +29,15 @@
 #include "Arduino.h"
 #include "libbonuspin.h"
 #include "LiquidCrystal.h"
+#include "Adafruit_ILI9341.h"
 #include <SPI.h>
 
 namespace hitagi {
     constexpr auto RED_PWM = 5;
     constexpr auto GREEN_PWM = 6;
     constexpr auto BLUE_PWM = 9;
-    constexpr auto SPIDecoderA0 = A3;
-    constexpr auto SPIDecoderA1 = A2;
-    constexpr auto SPIDecoderA2 = A1;
-    constexpr auto SPIDecoderEnable = A0;
-    constexpr auto GPIODeviceAddress = 0b111;
-    constexpr auto SRAMDeviceAddress = 0b110;
-    constexpr auto SPI0DeviceAddress = 0b000;
-    constexpr auto SPI1DeviceAddress = 0b001;
-    constexpr auto SPI2DeviceAddress = 0b010;
+    constexpr auto SRAMEnable = A0;
+    constexpr auto MCP23S17Enable = A1;
     // These are unused pins which are broken out into STEMMA connectors
     constexpr auto Digital0 = 4;
     constexpr auto Analog6 = A6;
@@ -52,17 +46,6 @@ namespace hitagi {
     //constexpr auto Analog8 = A8;
     constexpr auto PWM = 10;
     constexpr auto D10 = 10;
-    inline void setSPIAddress(byte value) noexcept {
-        digitalWrite(SPIDecoderA0, value & 0b001 ? HIGH : LOW);
-        digitalWrite(SPIDecoderA1, value & 0b010 ? HIGH : LOW);
-        digitalWrite(SPIDecoderA2, value & 0b100 ? HIGH : LOW);
-    }
-    inline void selectSPIDevice() noexcept {
-        digitalWrite(SPIDecoderEnable, LOW);
-    }
-    inline void deselectSPIDevice() noexcept {
-        digitalWrite(SPIDecoderEnable, HIGH);
-    }
     class GPIOExpander : public bonuspin::GenericMCP23S17<0b000> {
         public:
             // note that the interrupt lines are _NOT_ connected in REV2
@@ -82,15 +65,14 @@ namespace hitagi {
             GPIOExpander(Self&&) = delete;
             ~GPIOExpander() override = default;
             void enableCS() noexcept override {
-                setSPIAddress(GPIODeviceAddress);
-                selectSPIDevice();
+                digitalWrite(MCP23S17Enable, LOW);
             }
             void disableCS() noexcept override {
-                deselectSPIDevice();
+                digitalWrite(MCP23S17Enable, HIGH);
             }
     };
 
-    using SPIActivator = bonuspin::HoldPinLow<SPIDecoderEnable>;
+    using SPIActivator = bonuspin::HoldPinLow<SRAMEnable>;
 
     class SRAM final {
         private:
@@ -122,14 +104,12 @@ namespace hitagi {
             }
         public:
             uint8_t read(Address address) const noexcept {
-                setSPIAddress(SRAMDeviceAddress);
                 SPIActivator activate;
                 sendOpcode(Opcodes::READ);
                 transferAddress(address);
                 return SPI.transfer(0x00);
             }
             void write(Address address, uint8_t value) const noexcept {
-                setSPIAddress(SRAMDeviceAddress);
                 SPIActivator activate;
                 sendOpcode(Opcodes::WRITE);
                 transferAddress(address);
@@ -141,13 +121,13 @@ namespace hitagi {
 
     class Screen final : public LiquidCrystal {
         public:
-            static constexpr auto GPIO_RS = 6;
-            static constexpr auto GPIO_RW = 5;
-            static constexpr auto GPIO_EN = 4;
-            static constexpr auto GPIO_A4 = 3;
-            static constexpr auto GPIO_A5 = 2;
-            static constexpr auto GPIO_A6 = 1;
-            static constexpr auto GPIO_A7 = 0;
+            static constexpr auto GPIO_RS = 9;
+            static constexpr auto GPIO_RW = 10;
+            static constexpr auto GPIO_EN = 11;
+            static constexpr auto GPIO_A4 = 12;
+            static constexpr auto GPIO_A5 = 13;
+            static constexpr auto GPIO_A6 = 14;
+            static constexpr auto GPIO_A7 = 15;
             static Screen& instance() noexcept {
                 static Screen _self(GPIO_RS, GPIO_RW, GPIO_EN, GPIO_A4, GPIO_A5, GPIO_A6, GPIO_A7);
                 return _self;
@@ -161,10 +141,10 @@ namespace hitagi {
             ~Screen() override = default;
             using LiquidCrystal::LiquidCrystal;
             void digitalWrite(int pin, int value) noexcept override {
-                ::digitalWrite(pin, value, GPIOExpander::instance());
+                GPIOExpander::instance().digitalWrite(pin, value);
             }
             void pinMode(int pin, int mode) noexcept override {
-                ::pinMode(pin, mode, GPIOExpander::instance());
+                GPIOExpander::instance().pinMode(pin, mode);
             }
             // @todo add methods for setting pwm colors
     };
@@ -176,6 +156,9 @@ namespace hitagi {
     void setupOutputPins(Args&& ... pins) noexcept {
         (setupOutputPins(pins), ...);
     }
+    extern SRAM& sram;
+    extern GPIOExpander& gpio;
+    extern Screen& lcd;
 } // end namespace hitagi
 
 

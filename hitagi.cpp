@@ -26,6 +26,9 @@
 #include "hitagi.h"
 
 namespace hitagi {
+    SRAM& sram = SRAM::instance();
+    GPIOExpander& gpio = GPIOExpander::instance();
+    Screen& lcd = Screen::instance();
     void Screen::setBacklightRedColor(int value) const noexcept {
         analogWrite(RED_PWM, value);
     }
