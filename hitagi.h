@@ -33,6 +33,7 @@
 #include <SD.h>
 
 namespace hitagi {
+#ifdef ARDUINO_AVR_PROMICRO
     constexpr auto LED0 = 10; 
     constexpr auto LED1 = 9; 
     constexpr auto D4 = 4;
@@ -44,6 +45,23 @@ namespace hitagi {
     constexpr auto SDCS = A1;
     constexpr auto SPI0Enable = A3;
     constexpr auto SPI1Enable = A2;
+#elif defined(ARDUINO_AVR_ATmega1284)
+    constexpr auto LED0 = 12;
+    constexpr auto LED1 = 13;
+    constexpr auto LED2 = 14;
+    constexpr auto LED3 = 15;
+    constexpr auto PWM0 = 3;
+    constexpr auto PWM1 = 4;
+    constexpr auto LCD_CS = 16;
+    constexpr auto SDCS = 17;
+    constexpr auto LCD_DC = 18;
+    constexpr auto LCD_RESET = 19;
+    constexpr auto SPI0Enable = 20;
+    constexpr auto SPI1Enable = 21;
+    constexpr auto D4 = 4;
+#else
+#error "Unsupported target for the hitagi platform"
+#endif
     template<uint8_t pin>
     using SPIActivator = bonuspin::HoldPinLow<pin>;
 
@@ -81,6 +99,10 @@ namespace hitagi {
         // now pulse the led
         cycleLED<LED0>();
         cycleLED<LED1>();
+#ifdef ARDUINO_AVR_ATmega1284
+        cycleLED<LED2>();
+        cycleLED<LED3>();
+#endif
         return outcome;
     }
 
