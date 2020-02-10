@@ -33,19 +33,7 @@
 #include <SD.h>
 
 namespace hitagi {
-#ifdef ARDUINO_AVR_PROMICRO
-    constexpr auto LED0 = 10; 
-    constexpr auto LED1 = 9; 
-    constexpr auto D4 = 4;
-    constexpr auto PWM0 = 6;
-    constexpr auto PWM1 = 5;
-    constexpr auto LCD_DC = 7;
-    constexpr auto LCD_RESET = 8;
-    constexpr auto LCD_CS = A0;
-    constexpr auto SDCS = A1;
-    constexpr auto SPI0Enable = A3;
-    constexpr auto SPI1Enable = A2;
-#elif defined(ARDUINO_AVR_ATmega1284)
+#if defined(ARDUINO_AVR_ATmega1284)
     constexpr auto LED0 = 12;
     constexpr auto LED1 = 13;
     constexpr auto LED2 = 14;
@@ -99,10 +87,8 @@ namespace hitagi {
         // now pulse the led
         cycleLED<LED0>();
         cycleLED<LED1>();
-#ifdef ARDUINO_AVR_ATmega1284
         cycleLED<LED2>();
         cycleLED<LED3>();
-#endif
         return outcome;
     }
 
