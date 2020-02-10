@@ -33,23 +33,22 @@
 #include <SD.h>
 
 namespace hitagi {
-#if defined(ARDUINO_AVR_ATmega1284)
+#ifndef ARDUINO_AVR_ATmega1284
+#error "Unsupported target for the hitagi platform"
+#endif
     constexpr auto LED0 = 12;
     constexpr auto LED1 = 13;
     constexpr auto LED2 = 14;
     constexpr auto LED3 = 15;
     constexpr auto PWM0 = 3;
     constexpr auto PWM1 = 4;
-    constexpr auto LCD_CS = 16;
-    constexpr auto SDCS = 17;
-    constexpr auto LCD_DC = 18;
-    constexpr auto LCD_RESET = 19;
-    constexpr auto SPI0Enable = 20;
-    constexpr auto SPI1Enable = 21;
+    constexpr auto LCD_CS = 18;
+    constexpr auto SDCS = 19;
+    constexpr auto LCD_DC = 20;
+    constexpr auto LCD_RESET = 21;
+    constexpr auto SPI0Enable = 22;
+    constexpr auto SPI1Enable = 23;
     constexpr auto D4 = 4;
-#else
-#error "Unsupported target for the hitagi platform"
-#endif
     template<uint8_t pin>
     using SPIActivator = bonuspin::HoldPinLow<pin>;
 
