@@ -27,17 +27,24 @@
 #include <SPI.h>
 
 namespace hitagi {
-    SRAM& sram = SRAM::instance();
+    SRAM<SRAMEnable> sram;
     Adafruit_ILI9341 lcd(LCD_CS, LCD_DC, LCD_RESET);
-    Adafruit_seesaw soil0;
+    template<uint8_t pin>
+    void cycleLED(int delay = 10) {
+        for (int i = 0; i < 0x200; ++i) {
+            if (i < 0x100) {
+                setLEDIntensity<pin>(i, delay);
+            } else {
+                setLEDIntensity<pin>(0x1FF - i, delay);
+            }
+        }
+    }
+    inline void setupSPICSPin(int pin) noexcept {
+        pinMode(pin, OUTPUT);
+        digitalWrite(pin, HIGH);
+    }
     SetupResult setup() {
         SetupResult ret;
-        pinMode(SDCS, OUTPUT);
-        digitalWrite(SDCS, HIGH);
-        pinMode(SRAMEnable, OUTPUT);
-        digitalWrite(SRAMEnable, HIGH);
-        pinMode(LCD_CS, OUTPUT);
-        digitalWrite(LCD_CS, HIGH);
 
         SPI.begin();
         if (!SD.begin(SDCS)) {
@@ -45,10 +52,6 @@ namespace hitagi {
         }
         // setup the lcd as well
         lcd.begin();
-        // then try and setup the soil sensor as well
-        if (!soil0.begin(0x36)) {
-            ret.markSoil0Failed();
-        }
 
         // try doing a round trip test with the SRAM
         auto value = 0x51;
@@ -58,14 +61,8 @@ namespace hitagi {
             ret.markSRAMFailed();
         }
         // now pulse the led
-        for (int i = 0; i < 0x100; ++i) {
-            analogWrite(LED0, i);
-            delay(10);
-        }
-        for (int i = 0; i < 0x100; ++i) {
-            analogWrite(LED0, 0xFF - i);
-        }
-        
+        cycleLED<LED0>();
+        cycleLED<LED1>();
         return ret;
     }
 } // end namespace hitagi

@@ -10,10 +10,6 @@ void setup() {
         Serial.println("Could not initialize SD Card!");
         delay(1000);
     } 
-    if (result.soil0Failed()) {
-        Serial.println("Could not initialize stemma soil sensor!");
-        delay(1000);
-    }
     if (result.sramInitFailed()) {
         Serial.println("SRAM initialization failed");
         Serial.println("Bad read/write test!");

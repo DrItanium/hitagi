@@ -29,26 +29,28 @@
 #include "Arduino.h"
 #include "libbonuspin.h"
 #include "Adafruit_ILI9341.h"
-#include "Adafruit_seesaw.h"
 #include <SPI.h>
 #include <SD.h>
 
 namespace hitagi {
     constexpr auto LED0 = 10; 
+    constexpr auto LED1 = 9; 
     constexpr auto D4 = 4;
     constexpr auto PWM0 = 6;
     constexpr auto PWM1 = 5;
     constexpr auto LCD_DC = 7;
     constexpr auto LCD_RESET = 8;
-    constexpr auto BRIGHTNESS = 9;
     constexpr auto LCD_CS = A0;
     constexpr auto SDCS = A1;
     constexpr auto SRAMEnable = A2;
     constexpr auto SPI0Enable = A3;
-    using SRAMActivator = bonuspin::HoldPinLow<SRAMEnable>;
-    using SPI0Activator = bonuspin::HoldPinLow<SPI0Enable>;
+    template<uint8_t pin>
+    using SPIActivator = bonuspin::HoldPinLow<pin>;
 
+    template<uint8_t pin>
     class SRAM final {
+        public:
+            using Activator = SPIActivator<pin>;
         private:
             enum class Opcodes : uint8_t {
                 RDSR = 0x05,
@@ -63,9 +65,9 @@ namespace hitagi {
             };
         public:
             using Address = uint32_t;
-            static SRAM& instance() noexcept {
-                static SRAM _self;
-                return _self;
+            SRAM() {
+                pinMode(pin, OUTPUT);
+                digitalWrite(pin, HIGH);
             }
         private:
             void sendOpcode(Opcodes op) const noexcept {
@@ -76,43 +78,44 @@ namespace hitagi {
                 SPI.transfer(static_cast<uint8_t>(address >> 8));
                 SPI.transfer(static_cast<uint8_t>(address));
             }
+            [[nodiscard]] uint8_t perform(Opcodes opcode, Address address, uint8_t value) const noexcept {
+                Activator activate;
+                sendOpcode(opcode);
+                transferAddress(address);
+                return SPI.transfer(value);
+            }
         public:
             uint8_t read(Address address) const noexcept {
-                SRAMActivator activate;
-                sendOpcode(Opcodes::READ);
-                transferAddress(address);
-                return SPI.transfer(0x00);
+                return perform(Opcodes::READ, address, 0x00);
             }
             void write(Address address, uint8_t value) const noexcept {
-                SRAMActivator activate;
-                sendOpcode(Opcodes::WRITE);
-                transferAddress(address);
-                SPI.transfer(value);
+                (void)perform(Opcodes::WRITE, address, value);
             }
-        private:
-            SRAM() = default;
     };
 
     class SetupResult final {
         public:
             constexpr SetupResult() = default;
-            void markSDInitFailed() noexcept { _sdFailed = true; }
-            constexpr auto sdInitFailed() const noexcept { return _sdFailed; }
-            void markSoil0Failed() noexcept { _soil0Failed = true; }
-            constexpr auto soil0Failed() const noexcept { return _soil0Failed; }
-            void markSRAMFailed() noexcept { _sramFailed = true; }
-            constexpr auto sramInitFailed() const noexcept { return _sramFailed; }
+            void markSDInitFailed() noexcept { _flags |= 0b0000'0001; }
+            constexpr bool sdInitFailed() const noexcept { return _flags & 0b0000'0001; }
+            void markSRAMFailed() noexcept { _flags |= 0b0000'0010; }
+            constexpr bool sramInitFailed() const noexcept { return _flags & 0b0000'0010; }
         private:
-            bool _sdFailed = false;
-            bool _soil0Failed = false;
-            bool _sramFailed = false;
+            uint8_t _flags = 0u;
     };
 
     SetupResult setup() noexcept;
 
-    extern SRAM& sram;
+    template<uint8_t pin>
+    inline void setLEDIntensity(uint8_t intensity, int delayAmount = 0) noexcept {
+        bonuspin::emitIntensity<pin>(intensity, bonuspin::AnalogWrite_t{});
+        if (delayAmount > 0) {
+            delay(delayAmount);
+        }
+    }
+
+    extern SRAM<SRAMEnable> sram;
     extern Adafruit_ILI9341 lcd;
-    extern Adafruit_seesaw soil0;
 } // end namespace hitagi
 
 
