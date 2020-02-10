@@ -42,70 +42,12 @@ namespace hitagi {
     constexpr auto LCD_RESET = 8;
     constexpr auto LCD_CS = A0;
     constexpr auto SDCS = A1;
-    constexpr auto SRAMEnable = A2;
     constexpr auto SPI0Enable = A3;
+    constexpr auto SPI1Enable = A2;
     template<uint8_t pin>
     using SPIActivator = bonuspin::HoldPinLow<pin>;
 
-    template<uint8_t pin>
-    class SRAM final {
-        public:
-            using Activator = SPIActivator<pin>;
-        private:
-            enum class Opcodes : uint8_t {
-                RDSR = 0x05,
-                RDMR = RDSR,
-                WRSR = 0x01,
-                WRMR = WRSR,
-                READ = 0x03,
-                WRITE = 0x02,
-                EDIO = 0x3B,
-                EQIO = 0x38,
-                RSTIO = 0xFF,
-            };
-        public:
-            using Address = uint32_t;
-            SRAM() {
-                pinMode(pin, OUTPUT);
-                digitalWrite(pin, HIGH);
-            }
-        private:
-            void sendOpcode(Opcodes op) const noexcept {
-                SPI.transfer(uint8_t(op));
-            }
-            void transferAddress(Address address) const noexcept {
-                SPI.transfer(static_cast<uint8_t>(address >> 16));
-                SPI.transfer(static_cast<uint8_t>(address >> 8));
-                SPI.transfer(static_cast<uint8_t>(address));
-            }
-            [[nodiscard]] uint8_t perform(Opcodes opcode, Address address, uint8_t value) const noexcept {
-                Activator activate;
-                sendOpcode(opcode);
-                transferAddress(address);
-                return SPI.transfer(value);
-            }
-        public:
-            uint8_t read(Address address) const noexcept {
-                return perform(Opcodes::READ, address, 0x00);
-            }
-            void write(Address address, uint8_t value) const noexcept {
-                (void)perform(Opcodes::WRITE, address, value);
-            }
-    };
-
-    class SetupResult final {
-        public:
-            constexpr SetupResult() = default;
-            void markSDInitFailed() noexcept { _flags |= 0b0000'0001; }
-            constexpr bool sdInitFailed() const noexcept { return _flags & 0b0000'0001; }
-            void markSRAMFailed() noexcept { _flags |= 0b0000'0010; }
-            constexpr bool sramInitFailed() const noexcept { return _flags & 0b0000'0010; }
-        private:
-            uint8_t _flags = 0u;
-    };
-
-    SetupResult setup() noexcept;
-
+    extern Adafruit_ILI9341 lcd;
     template<uint8_t pin>
     inline void setLEDIntensity(uint8_t intensity, int delayAmount = 0) noexcept {
         bonuspin::emitIntensity<pin>(intensity, bonuspin::AnalogWrite_t{});
@@ -114,8 +56,35 @@ namespace hitagi {
         }
     }
 
-    extern SRAM<SRAMEnable> sram;
-    extern Adafruit_ILI9341 lcd;
+    template<uint8_t pin>
+    void cycleLED(int delay = 10) {
+        for (int i = 0; i < 0x200; ++i) {
+            if (i < 0x100) {
+                setLEDIntensity<pin>(i, delay);
+            } else {
+                setLEDIntensity<pin>(0x1FF - i, delay);
+            }
+        }
+    }
+
+    template<typename SDFailFn>
+    bool setup(SDFailFn onSD) noexcept {
+        bool outcome = true;
+        SPI.begin();
+        if (!SD.begin(SDCS)) {
+            outcome = false;
+            onSD();
+        }
+        // setup the lcd as well
+        lcd.begin();
+
+        // now pulse the led
+        cycleLED<LED0>();
+        cycleLED<LED1>();
+        return outcome;
+    }
+
+
 } // end namespace hitagi
 
 

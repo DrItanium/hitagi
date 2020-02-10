@@ -83,7 +83,7 @@ inline void shiftOutMultiple(int dataPin, int clockPin, decltype(MSBFIRST) order
 template<typename T, typename ... Args>
 void shiftOutMultiple(int dataPin, int clockPin, decltype(MSBFIRST) order, T value, Args&& ... rest) noexcept {
     shiftOut(dataPin, clockPin, order, value);
-    if (sizeof...(rest) > 0) {
+    if constexpr (sizeof...(rest) > 0) {
         shiftOutMultiple(dataPin, clockPin, order, rest...);
     }
 }

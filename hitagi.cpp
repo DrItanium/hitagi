@@ -27,43 +27,6 @@
 #include <SPI.h>
 
 namespace hitagi {
-    SRAM<SRAMEnable> sram;
     Adafruit_ILI9341 lcd(LCD_CS, LCD_DC, LCD_RESET);
-    template<uint8_t pin>
-    void cycleLED(int delay = 10) {
-        for (int i = 0; i < 0x200; ++i) {
-            if (i < 0x100) {
-                setLEDIntensity<pin>(i, delay);
-            } else {
-                setLEDIntensity<pin>(0x1FF - i, delay);
-            }
-        }
-    }
-    inline void setupSPICSPin(int pin) noexcept {
-        pinMode(pin, OUTPUT);
-        digitalWrite(pin, HIGH);
-    }
-    SetupResult setup() {
-        SetupResult ret;
-
-        SPI.begin();
-        if (!SD.begin(SDCS)) {
-            ret.markSDInitFailed();
-        }
-        // setup the lcd as well
-        lcd.begin();
-
-        // try doing a round trip test with the SRAM
-        auto value = 0x51;
-        auto address = 0x4FE;
-        sram.write(address, value);
-        if (auto result = sram.read(address); result != value) {
-            ret.markSRAMFailed();
-        }
-        // now pulse the led
-        cycleLED<LED0>();
-        cycleLED<LED1>();
-        return ret;
-    }
 } // end namespace hitagi
 
