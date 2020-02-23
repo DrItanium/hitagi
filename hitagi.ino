@@ -82,18 +82,15 @@ void setup() {
   Serial.println(testFilledRoundRects());
   delay(500);
 #endif 
+  hitagi::lcd.fillScreen(ILI9341_BLACK);
 }
 
 void loop() {
     if (stemma0Enabled) {
-        hitagi::lcd.fillScreen(ILI9341_BLACK);
         hitagi::lcd.setCursor(0, 0);
-        hitagi::lcd.setTextColor(ILI9341_WHITE);
-        hitagi::lcd.setTextSize(3);
-        hitagi::lcd.print("Moisture: " );
-        hitagi::lcd.println(stemma0.touchRead(0));
-        hitagi::lcd.print("Temperature: ");
-        hitagi::lcd.println(stemma0.getTemp());
+        hitagi::lcd.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+        hitagi::lcd.setTextSize(6);
+        hitagi::lcd.println(stemma0.touchRead(0), HEX);
         delay(1000);
     } else {
         for(uint8_t rotation=0; rotation<4; rotation++) {
