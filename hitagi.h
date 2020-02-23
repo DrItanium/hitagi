@@ -29,6 +29,7 @@
 #include "Arduino.h"
 #include "libbonuspin.h"
 #include "Adafruit_ILI9341.h"
+#include <Adafruit_seesaw.h>
 #include <SPI.h>
 #include <SD.h>
 
@@ -72,6 +73,8 @@ namespace hitagi {
         }
     }
 
+    bool setupSoilSensor(Adafruit_seesaw& seesaw);
+
     template<typename SDFailFn>
     bool setup(SDFailFn onSD) noexcept {
         bool outcome = true;
@@ -82,7 +85,8 @@ namespace hitagi {
         }
         // setup the lcd as well
         lcd.begin();
-
+        lcd.setRotation(3);
+        lcd.fillScreen(ILI9341_BLACK);
         // now pulse the led
         cycleLED<LED0>();
         cycleLED<LED1>();

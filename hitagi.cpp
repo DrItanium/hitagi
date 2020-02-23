@@ -28,5 +28,8 @@
 
 namespace hitagi {
     Adafruit_ILI9341 lcd(LCD_CS, LCD_DC, LCD_RESET);
+    bool setupSoilSensor(Adafruit_seesaw& seesaw) {
+        return seesaw.begin(0x36);
+    }
 } // end namespace hitagi
 

@@ -1,8 +1,9 @@
 #include <SPI.h>
-#include "Adafruit_ILI9341.h"
-#include "Adafruit_seesaw.h"
+#include <Adafruit_NeoPixel.h>
 #include "hitagi.h"
 
+Adafruit_seesaw stemma0;
+bool stemma0Enabled = false;
 void setup() {
     Serial.begin(9600);
     Serial.println("Starting up....");
@@ -10,9 +11,15 @@ void setup() {
                 Serial.println("Could not initialize SD Card!");
                 delay(1000);
                 });
-    hitagi::lcd.setRotation(1);
-    hitagi::lcd.fillScreen(ILI9341_BLACK);
+    stemma0Enabled = hitagi::setupSoilSensor(stemma0);
+    if (!stemma0Enabled) {
+        hitagi::lcd.println("Unable to initialize stemma!");
+    } else {
+        hitagi::lcd.println("Stemma soil sensor up!");
+    }
+    hitagi::lcd.println("Startup complete!");
     Serial.println("Startup complete!");
+    delay(1000);
 #ifdef ARDUINO_AVR_ATmega1284
 // read diagnostics (optional but can help debug problems)
   uint8_t x = hitagi::lcd.readcommand8(ILI9341_RDMODE);
@@ -78,13 +85,23 @@ void setup() {
 }
 
 void loop() {
-#ifdef ARDUINO_AVR_ATmega1284
-  for(uint8_t rotation=0; rotation<4; rotation++) {
-    hitagi::lcd.setRotation(rotation);
-    testText();
-    delay(1000);
-  }
-#endif
+    if (stemma0Enabled) {
+        hitagi::lcd.fillScreen(ILI9341_BLACK);
+        hitagi::lcd.setCursor(0, 0);
+        hitagi::lcd.setTextColor(ILI9341_WHITE);
+        hitagi::lcd.setTextSize(3);
+        hitagi::lcd.print("Moisture: " );
+        hitagi::lcd.println(stemma0.touchRead(0));
+        hitagi::lcd.print("Temperature: ");
+        hitagi::lcd.println(stemma0.getTemp());
+        delay(1000);
+    } else {
+        for(uint8_t rotation=0; rotation<4; rotation++) {
+            hitagi::lcd.setRotation(rotation);
+            testText();
+            delay(1000);
+        }
+    }
 }
 #ifdef ARDUINO_AVR_ATmega1284
 unsigned long testFillScreen() {
